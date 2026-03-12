@@ -2,11 +2,14 @@ import torch_geometric.utils as pyg_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch_geometric.utils as pyg_utils
 import os
 import json
 import pandas as pd
 from torch_geometric.nn import SAGEConv
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, roc_auc_score, classification_report, auc, roc_curve
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 base_path = r"D:\3rd year project\Implementation\archive"
 processed_path = os.path.join(base_path, "processed_data.pt")
@@ -198,13 +201,77 @@ for epoch in range(50):
     if epoch % 10 == 0:
         print(f"Epoch {epoch:02d} | Total Loss: {loss.item():.4f} | Pred: {pred_loss.item():.4f} | CL: {cl_loss.item():.4f}")
 
+json_path = os.path.join(base_path, "train.json")
+with open(json_path, 'r', encoding='utf-8') as f:
+    users = json.load(f)
+
+# Extract labels in the same order as your data nodes
+# Assuming your 'id_map' maps user_id -> node index
+id_map_path = os.path.join(base_path, "id_map.json")
+with open(id_map_path, 'r') as f:
+    id_map = json.load(f)
+
+true_labels = []
+for idx in range(len(id_map)):
+    user_id = list(id_map.keys())[list(id_map.values()).index(idx)]
+    # Find this user in the JSON
+    user_data = next((u for u in users if u["ID"].strip() == str(user_id).strip()), None)
+    if user_data is not None:
+        true_labels.append(int(user_data["label"]))
+    else:
+        true_labels.append(0)  # fallback if missing
+true_labels = torch.tensor(true_labels)
+
 # Final Prediction Save
 final_output_path = os.path.join(base_path, "final_bot_predictions.csv")
 classifier_model.eval()
 with torch.no_grad():
     _, logits = classifier_model(data.x, data.edge_index, data.x_sequence)
     final_preds = torch.argmax(logits, dim=1)
-
+labels_df['true_label'] = true_labels.numpy() 
 labels_df['final_refined_label'] = final_preds.numpy()
 labels_df.to_csv(final_output_path, index=False)
 print(f"Refined labels saved to {final_output_path}")
+true_labels = true_labels.cpu().numpy()
+#true_labels = pseudo_labels.cpu().numpy()
+pred_labels = final_preds.cpu().numpy()
+
+accuracy = accuracy_score(true_labels, pred_labels)
+precision = precision_score(true_labels, pred_labels)
+recall = recall_score(true_labels, pred_labels)
+f1 = f1_score(true_labels, pred_labels)
+
+print("\n--- Classification Metrics ---")
+print(f"Accuracy : {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall   : {recall:.4f}")
+print(f"F1 Score : {f1:.4f}")
+
+cm = confusion_matrix(true_labels, pred_labels)
+
+plt.figure(figsize=(6,5))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+            xticklabels=["Human","Bot"],
+            yticklabels=["Human","Bot"])
+
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
+
+probs = torch.softmax(logits, dim=1)[:,1].cpu().numpy()
+
+fpr, tpr, _ = roc_curve(true_labels, probs)
+roc_auc = auc(fpr, tpr)
+
+plt.figure()
+plt.plot(fpr, tpr, label=f"ROC curve (AUC = {roc_auc:.3f})")
+plt.plot([0,1],[0,1],'k--')
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curve")
+plt.legend()
+plt.show()
+
+print("\nDetailed Classification Report:")
+print(classification_report(true_labels, pred_labels, target_names=["Human", "Bot"]))

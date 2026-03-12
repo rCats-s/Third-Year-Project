@@ -7,6 +7,9 @@ import torch.nn as nn
 from torch_geometric.nn import SAGEConv
 from sklearn.cluster import KMeans
 from torch_geometric.utils import to_dense_adj
+from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
 
 # 1. Define paths
 base_path = r"D:\3rd year project\Implementation\archive"
@@ -256,6 +259,41 @@ results_df = pd.DataFrame(results)
 output_path = os.path.join(base_path, "pseudo_labels.csv")
 results_df.to_csv(output_path, index=False)
 
+z_numpy = final_z.cpu().numpy()
+labels_numpy = pseudo_labels.cpu().numpy()
+
+sil_score = silhouette_score(z_numpy, labels_numpy)
+db_score = davies_bouldin_score(z_numpy, labels_numpy)
+ch_score = calinski_harabasz_score(z_numpy, labels_numpy)
+
+print("\n--- Clustering Metrics ---")
+print(f"Silhouette Score: {sil_score:.4f}")
+print(f"Davies-Bouldin Index: {db_score:.4f}")
+print(f"Calinski-Harabasz Score: {ch_score:.4f}")
+tsne = TSNE(n_components=2, perplexity=30, random_state=42)
+z_2d = tsne.fit_transform(z_numpy)
+
+plt.figure(figsize=(8,6))
+plt.scatter(z_2d[:,0], z_2d[:,1], c=labels_numpy, cmap="coolwarm", s=10)
+
+plt.title("t-SNE Visualization of Node Embeddings")
+plt.xlabel("Dimension 1")
+plt.ylabel("Dimension 2")
+plt.colorbar(label="Cluster")
+
+plt.savefig(os.path.join(base_path, "tsne_embeddings.png"), dpi=300)
+plt.close()
+
+counts = pd.Series(labels_numpy).value_counts()
+
+plt.figure()
+counts.plot(kind='bar')
+plt.title("Cluster Distribution")
+plt.xlabel("Cluster")
+plt.ylabel("Number of Users")
+
+plt.savefig(os.path.join(base_path, "cluster_distribution.png"), dpi=300)
+plt.close()
 print(f"Successfully saved {len(results_df)} pseudo-labels to {output_path}")
 human_count = (results_df['pseudo_label'] == 0).sum()
 bot_count = (results_df['pseudo_label'] == 1).sum()
@@ -263,3 +301,4 @@ print(f"Summary: Cluster 0: {human_count} users | Cluster 1: {bot_count} users")
 print(f"\nTraining Complete! Pseudo-labels generated for {len(pseudo_labels)} users.")
 torch.save(model.state_dict(), os.path.join(base_path, "phase3_model_weights.pt"))
 print("Model weights saved for Phase 4.")
+
