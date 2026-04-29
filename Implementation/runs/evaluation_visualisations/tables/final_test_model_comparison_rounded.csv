@@ -1,0 +1,7 @@
+model,feature_setting,run_dir,accuracy,balanced_accuracy,precision,recall,f1,macro_f1,weighted_f1,ari,nmi
+BotDCGC,Temporal,D:\3rd year project\Implementation\runs\botdcgc_snowball_10k,0.3195,0.4568,0.1542,0.6653,0.2504,0.3137,0.3553,0.0362,0.0051
+BotDCGC,No temporal,D:\3rd year project\Implementation\runs\botdcgc_snowball_10k_notemp,0.3174,0.4638,0.1571,0.6862,0.2557,0.3126,0.3502,0.0313,0.0037
+CACL,Temporal,D:\3rd year project\Implementation\runs\cacl_baseline_fair,0.6004,0.5697,0.2193,0.523,0.309,0.514,0.6489,0.0255,0.0099
+CACL,No temporal,D:\3rd year project\Implementation\runs\cacl_baseline_fair_notemp,0.2116,0.5046,0.1722,0.9498,0.2916,0.2014,0.142,-0.0093,0.0003
+TCADBOT,Temporal,D:\3rd year project\Implementation\runs\hybrid_fair,0.609,0.5732,0.223,0.5188,0.3119,0.5194,0.656,0.0295,0.011
+TCADBOT,No temporal,D:\3rd year project\Implementation\runs\hybrid_fair_notemp,0.2059,0.5012,0.1712,0.9498,0.2901,0.1945,0.1316,-0.0026,0.0
